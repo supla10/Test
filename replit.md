@@ -1,6 +1,6 @@
-# [Project name]
+# Loopnow CPA Copilot
 
-_Replace the heading above with the project's name, and this line with one sentence describing what this app does for users._
+Production-oriented Canadian bookkeeping copilot prototype with deterministic CRA/GIFI rules, visible agent tool activity, human review, and audit history.
 
 ## Run & Operate
 
@@ -9,7 +9,7 @@ _Replace the heading above with the project's name, and this line with one sente
 - `pnpm run build` — typecheck + build all packages
 - `pnpm --filter @workspace/api-spec run codegen` — regenerate API hooks and Zod schemas from the OpenAPI spec
 - `pnpm --filter @workspace/db run push` — push DB schema changes (dev only)
-- Required env: `DATABASE_URL` — Postgres connection string
+- Optional env: see `.env.example`; the deterministic demo does not require an API key.
 
 ## Stack
 
@@ -22,15 +22,23 @@ _Replace the heading above with the project's name, and this line with one sente
 
 ## Where things live
 
-_Populate as you build — short repo map plus pointers to the source-of-truth file for DB schema, API contracts, theme files, etc._
+- `artifacts/loopnow-cpa-copilot/` — React/Vite dashboard.
+- `artifacts/api-server/src/domain/copilot.ts` — receipt models, deterministic CRA rules, GIFI catalogue validation, processing orchestration, persistence, and audit events.
+- `artifacts/api-server/src/routes/copilot.ts` — typed API routes.
+- `lib/api-spec/openapi.yaml` — API source of truth; generated hooks live in `lib/api-client-react`.
+- `docs/architecture.md` and `docs/threat-model.md` — architecture and security decisions.
+- `evaluation/golden-cases.json` — deterministic evaluation scenarios.
 
 ## Architecture decisions
 
-_Populate as you build — non-obvious choices a reader couldn't infer from the code (3-5 bullets)._
+- The frontend consumes generated OpenAPI/React Query hooks rather than hand-written client types.
+- The prototype defaults to deterministic processing so the safety-critical demo is reproducible without a model key.
+- Receipt text is untrusted data; missing documentation and ambiguous classifications route to review with zero finalized ITC.
+- JSON persistence is isolated behind the domain store so it can move to PostgreSQL transactions without changing the UI contract.
 
 ## Product
 
-_Describe the high-level user-facing capabilities of this app once they exist._
+The dashboard lets an accounting user select a receipt, ask the copilot to process the selected item, observe each compliance/bookkeeping tool call, inspect the final classification and eligible ITC, approve or reject review cases, and review the audit trail.
 
 ## User preferences
 

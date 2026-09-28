@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Loopnow CPA Copilot"
+description = "A production-oriented Canadian bookkeeping copilot prototype with a receipt queue, deterministic CRA compliance tools, visible agent execution, audit history, and human review."
+version = "1.0.0"
+id = "artifacts/loopnow-cpa-copilot"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 20255
+
+[services.development]
+run = "pnpm --filter @workspace/loopnow-cpa-copilot run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/loopnow-cpa-copilot", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/loopnow-cpa-copilot/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "20255"
+BASE_PATH = "/"

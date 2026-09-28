@@ -10,6 +10,8 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: copilot
+    description: Receipt processing and agent activity
 paths:
   /healthz:
     get:
@@ -24,6 +26,114 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /dashboard:
+    get:
+      operationId: getDashboard
+      tags: [copilot]
+      summary: Get dashboard summary
+      responses:
+        "200":
+          description: Dashboard summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+  /receipts:
+    get:
+      operationId: listReceipts
+      tags: [copilot]
+      summary: List the receipt queue
+      responses:
+        "200":
+          description: Receipt queue
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Receipt"
+  /receipts/{receiptId}:
+    get:
+      operationId: getReceipt
+      tags: [copilot]
+      summary: Get receipt details
+      parameters:
+        - name: receiptId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Receipt details
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Receipt"
+        "404":
+          description: Receipt not found
+  /agent/process:
+    post:
+      operationId: processReceipt
+      tags: [copilot]
+      summary: Process the selected receipt through the deterministic copilot tool loop
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ProcessReceiptInput"
+      responses:
+        "200":
+          description: Structured agent run result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AgentRun"
+        "400":
+          description: Invalid request
+        "404":
+          description: Receipt not found
+  /agent/runs:
+    get:
+      operationId: listAgentRuns
+      tags: [copilot]
+      summary: List recent agent runs
+      responses:
+        "200":
+          description: Recent agent runs
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AgentRun"
+  /approvals/{approvalId}:
+    post:
+      operationId: decideApproval
+      tags: [copilot]
+      summary: Approve or reject a human review request
+      parameters:
+        - name: approvalId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ApprovalDecisionInput"
+      responses:
+        "200":
+          description: Updated approval
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Approval"
+        "404":
+          description: Approval not found
 components:
   schemas:
     HealthStatus:
@@ -33,4 +143,173 @@ components:
           type: string
       required:
         - status
+    Receipt:
+      type: object
+      required: [id, receiptNumber, vendor, date, description, subtotal, taxAmount, total, taxType, gstHstNumberStatus, commercialUsePercentage, status, category, receiptAvailable]
+      properties:
+        id: { type: string }
+        receiptNumber: { type: string }
+        vendor: { type: string }
+        date: { type: string }
+        description: { type: string }
+        subtotal: { type: number }
+        taxAmount: { type: number }
+        total: { type: number }
+        taxType:
+          type: string
+          enum: [GST, HST, NONE]
+        category:
+          type: string
+          enum: [Unknown, Office Expenses, Meals & Entertainment, Cash Deposit, Review Required]
+        gifiCode:
+          type: ["string", "null"]
+        gifiDescription:
+          type: ["string", "null"]
+        gstHstNumber:
+          type: ["string", "null"]
+        gstHstNumberStatus:
+          type: string
+          enum: [present, valid-format, missing, malformed, suspicious, unavailable]
+        commercialUsePercentage: { type: number, minimum: 0, maximum: 100 }
+        mealEntertainment: { type: boolean }
+        receiptAvailable: { type: boolean }
+        status:
+          type: string
+          enum: [pending, processing, processed, review, error]
+        processingStage:
+          type: string
+          enum: [idle, reading, validating, categorizing, calculating, mapping, review, complete, error]
+        documentationStatus:
+          type: ["string", "null"]
+          enum: [sufficient, insufficient, review, null]
+        eligibleItc:
+          type: ["number", "null"]
+        eligibilityPercentage:
+          type: ["number", "null"]
+        reviewReason:
+          type: ["string", "null"]
+    DashboardSummary:
+      type: object
+      required: [pending, processed, review, totalEligibleItc, ruleVersion, recentAuditEvents]
+      properties:
+        pending: { type: integer }
+        processed: { type: integer }
+        review: { type: integer }
+        totalEligibleItc: { type: number }
+        ruleVersion: { type: string }
+        recentAuditEvents:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditEvent"
+    ProcessReceiptInput:
+      type: object
+      required: [receiptId]
+      properties:
+        receiptId: { type: string, minLength: 1 }
+        userMessage: { type: string, maxLength: 500 }
+    ToolEvent:
+      type: object
+      required: [id, tool, label, status, startedAt, durationMs]
+      properties:
+        id: { type: string }
+        tool: { type: string }
+        label: { type: string }
+        status:
+          type: string
+          enum: [running, success, review, error]
+        detail:
+          type: ["string", "null"]
+        startedAt: { type: string }
+        durationMs: { type: integer }
+    ExpenseAnalysis:
+      type: object
+      required: [receiptId, category, categoryConfidence, gifiCode, gifiDescription, grossTax, eligibilityPercentage, eligibleItc, status, reason, documentationStatus, ruleVersion]
+      properties:
+        receiptId: { type: string }
+        category: { type: string }
+        categoryConfidence:
+          type: string
+          enum: [high, medium, low]
+        gifiCode: { type: ["string", "null"] }
+        gifiDescription: { type: ["string", "null"] }
+        grossTax: { type: number }
+        eligibilityPercentage: { type: number }
+        eligibleItc: { type: number }
+        status:
+          type: string
+          enum: [eligible, partial, ineligible, review]
+        reason: { type: string }
+        documentationStatus:
+          type: string
+          enum: [sufficient, insufficient, review]
+        documentationTier: { type: integer }
+        sourceTitle: { type: string }
+        sourceUrl: { type: string }
+        ruleVersion: { type: string }
+    AuditEvent:
+      type: object
+      required: [id, timestamp, actor, receiptId, action, status, ruleVersion]
+      properties:
+        id: { type: string }
+        timestamp: { type: string }
+        actor: { type: string }
+        receiptId: { type: string }
+        action: { type: string }
+        status:
+          type: string
+          enum: [success, review, error]
+        detail: { type: ["string", "null"] }
+        ruleVersion: { type: string }
+    Approval:
+      type: object
+      required: [id, receiptId, status, requestedAt, reason]
+      properties:
+        id: { type: string }
+        receiptId: { type: string }
+        status:
+          type: string
+          enum: [pending, approved, rejected]
+        requestedAt: { type: string }
+        decidedAt:
+          type: ["string", "null"]
+        reason: { type: string }
+    AgentRun:
+      type: object
+      required: [id, receiptId, status, startedAt, completedAt, events, analysis, auditEvents, metrics]
+      properties:
+        id: { type: string }
+        receiptId: { type: string }
+        status:
+          type: string
+          enum: [complete, review, error]
+        startedAt: { type: string }
+        completedAt: { type: string }
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/ToolEvent"
+        analysis:
+          $ref: "#/components/schemas/ExpenseAnalysis"
+        auditEvents:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditEvent"
+        approval:
+          anyOf:
+            - $ref: "#/components/schemas/Approval"
+            - type: "null"
+        metrics:
+          type: object
+          required: [timeToFirstEventMs, totalLatencyMs, toolCount]
+          properties:
+            timeToFirstEventMs: { type: integer }
+            totalLatencyMs: { type: integer }
+            toolCount: { type: integer }
+    ApprovalDecisionInput:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [approve, reject]
 

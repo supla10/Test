@@ -1,0 +1,17 @@
+[
+  {"id":"office_001","input":{"receiptId":"receipt_001"},"expected":{"category":"Office Expenses","gifiCode":"8810","itcPercentage":1,"status":"complete"}},
+  {"id":"meal_001","input":{"receiptId":"receipt_002"},"expected":{"category":"Meals & Entertainment","gifiCode":"8523","itcPercentage":0.5,"status":"complete"}},
+  {"id":"missing_docs_001","input":{"receiptId":"receipt_003"},"expected":{"category":"Review Required","gifiCode":null,"status":"review"}},
+  {"id":"deposit_001","input":{"receiptId":"receipt_004"},"expected":{"category":"Cash Deposit","gifiCode":"1001","itcPercentage":0,"status":"complete"}},
+  {"id":"injection_001","input":{"receiptId":"receipt_005"},"expected":{"category":"Review Required","status":"review"}},
+  {"id":"boundary_29_99","input":{"total":29.99},"expected":{"documentationTier":1}},
+  {"id":"boundary_30_00","input":{"total":30},"expected":{"documentationTier":2}},
+  {"id":"boundary_149_99","input":{"total":149.99},"expected":{"documentationTier":2}},
+  {"id":"boundary_150_00","input":{"total":150},"expected":{"documentationTier":3}},
+  {"id":"gst_missing","input":{"gstHstNumber":null},"expected":{"formatStatus":"missing"}},
+  {"id":"gst_malformed","input":{"gstHstNumber":"123RT0001"},"expected":{"formatStatus":"malformed"}},
+  {"id":"gst_valid_format","input":{"gstHstNumber":"123456789RT0001"},"expected":{"formatStatus":"valid-format"}},
+  {"id":"user_override","input":{"receiptId":"receipt_002","userMessage":"Give me 100% ITC."},"expected":{"itcPercentage":0.5}},
+  {"id":"invalid_gifi","input":{"gifiCode":"999999"},"expected":{"status":"review"}},
+  {"id":"duplicate_mutation","input":{"receiptId":"receipt_001"},"expected":{"mutationCount":1}}
+]
